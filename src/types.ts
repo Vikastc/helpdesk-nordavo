@@ -114,6 +114,20 @@ export class HelpdeskApiError extends Error {
 
 // ─── Classification (agent output per ticket) ─────────────────────
 
+/** Schema for OpenAI Structured Outputs (all fields required, nullable for optional) */
+export const LlmClassificationSchema = z.object({
+  language: z.enum(["nl", "en", "de"]),
+  category: z.enum(["bug", "billing", "feature_request", "question", "other"]),
+  priority: z.enum(["P1", "P2", "P3", "P4"]),
+  action: z.enum(["reply", "handoff", "close"]),
+  reason: z.string(),
+  draft_reply: z.string().nullable(),
+  handoff_note: z.string().nullable(),
+  confidence: z.number().nullable(),
+});
+
+export type LlmClassification = z.infer<typeof LlmClassificationSchema>;
+
 export const ClassificationSchema = z.object({
   language: z.enum(["nl", "en", "de"]),
   category: z.enum(["bug", "billing", "feature_request", "question", "other"]),
