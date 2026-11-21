@@ -46,6 +46,72 @@ export interface ExamplesResponse {
   examples: LabelledExample[];
 }
 
+// ─── Action Request & Response Types ──────────────────────────────
+
+export interface ReplyPayload {
+  language: "nl" | "en" | "de";
+  category: "bug" | "billing" | "feature_request" | "question" | "other";
+  priority: "P1" | "P2" | "P3" | "P4";
+  reason: string;
+  draft_reply: string;
+  confidence?: number;
+}
+
+export interface HandoffPayload {
+  language: "nl" | "en" | "de";
+  category: "bug" | "billing" | "feature_request" | "question" | "other";
+  priority: "P1" | "P2" | "P3" | "P4";
+  reason: string;
+  handoff_note: string;
+  confidence?: number;
+}
+
+export interface ClosePayload {
+  language: "nl" | "en" | "de";
+  category: "bug" | "billing" | "feature_request" | "question" | "other";
+  priority: "P1" | "P2" | "P3" | "P4";
+  reason: string;
+  confidence?: number;
+}
+
+export interface ActionResponse {
+  ok: boolean;
+  action: "reply" | "handoff" | "close";
+  ticket_id: string;
+}
+
+// ─── Agent State ──────────────────────────────────────────────────
+
+export interface HandledTicketRecord {
+  action: string;
+  timestamp: string;
+}
+
+export interface AgentState {
+  run_id: string;
+  handled_tickets: Record<string, HandledTicketRecord>;
+}
+
+// ─── Custom Errors ────────────────────────────────────────────────
+
+export class AlreadyHandledError extends Error {
+  constructor(public readonly ticketId: string) {
+    super(`Ticket ${ticketId} was already handled (409)`);
+    this.name = "AlreadyHandledError";
+  }
+}
+
+export class HelpdeskApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    public readonly details: unknown
+  ) {
+    super(`Helpdesk API error ${status} (${code}): ${JSON.stringify(details)}`);
+    this.name = "HelpdeskApiError";
+  }
+}
+
 // ─── Classification (agent output per ticket) ─────────────────────
 
 export const ClassificationSchema = z.object({
