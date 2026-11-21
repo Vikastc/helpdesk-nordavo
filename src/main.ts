@@ -1,8 +1,9 @@
 // src/main.ts — Functional CLI entry point.
 
-import { validateHelpdeskConfig } from "./config.js";
+import { validateHelpdeskConfig, validateFullConfig } from "./config.js";
 import * as client from "./client.js";
 import { resetLocalState, loadState } from "./state.js";
+import { classifyTicket } from "./classifier.js";
 
 const commands: Record<string, (args: string[]) => Promise<void>> = {
   status: async () => {
@@ -62,6 +63,23 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     console.log(`\n   Body:\n   ${t.body}\n`);
   },
 
+  classify: async (args: string[]) => {
+    validateFullConfig();
+    const id = args[0];
+    if (!id) {
+      console.error("❌ Please provide a ticket ID (e.g. npx tsx src/main.ts classify T001)");
+      return;
+    }
+    const t = await client.getTicket(id);
+    console.log(`\n🤖 Classifying Ticket ${t.id} with Claude...`);
+    console.log(`   Subject: "${t.subject}"`);
+    console.log(`   Body:    "${t.body}"\n`);
+    const decision = await classifyTicket(t);
+    console.log("📋 Decision Result:");
+    console.log(JSON.stringify(decision, null, 2));
+    console.log("");
+  },
+
   help: async () => {
     console.log(`
 🐓 Roosterly Helpdesk Agent
@@ -73,8 +91,9 @@ Commands:
   reset         Reset all practice tickets & clear local state
   examples      Show the 10 labelled examples
   tickets       List all open tickets
-  ticket <id>   Inspect a single ticket by ID
-  help          Show this message
+  ticket <id>     Inspect a single ticket by ID
+  classify <id>   Classify a ticket with Claude & guardrails (dry run)
+  help            Show this message
     `);
   },
 };
