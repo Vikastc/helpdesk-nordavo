@@ -8,6 +8,7 @@
     "status": "tsx src/main.ts status",
     "reset": "tsx src/main.ts reset",
     "examples": "tsx src/main.ts examples",
+    "test": "node --import tsx --test tests/**/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],

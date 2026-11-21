@@ -1,21 +1,28 @@
-// src/main.ts — CLI entry point.
+// src/main.ts — Functional CLI entry point.
 
 import { validateHelpdeskConfig } from "./config.js";
 import * as client from "./client.js";
+import { resetLocalState, loadState } from "./state.js";
 
-const commands: Record<string, () => Promise<void>> = {
+const commands: Record<string, (args: string[]) => Promise<void>> = {
   status: async () => {
     const s = await client.getStatus();
+    const localState = loadState();
+    const localHandledCount = Object.keys(localState.handled_tickets).length;
+
     console.log("\n📊 Helpdesk Status:");
-    console.log(`   Mode:    ${s.mode}`);
-    console.log(`   Open:    ${s.open_tickets}`);
-    console.log(`   Handled: ${s.handled_tickets}\n`);
+    console.log(`   Mode:          ${s.mode}`);
+    console.log(`   Open:          ${s.open_tickets}`);
+    console.log(`   Handled (API): ${s.handled_tickets}`);
+    console.log(`   Handled (Loc): ${localHandledCount}`);
+    console.log(`   Current RunId: ${localState.run_id}\n`);
   },
 
   reset: async () => {
-    console.log("🔄 Resetting practice tickets...");
-    await client.resetPractice();
-    console.log("✅ All tickets re-opened.\n");
+    console.log("🔄 Resetting practice tickets on Helpdesk API...");
+    const res = await client.resetPractice();
+    resetLocalState();
+    console.log(`✅ Re-opened ${res.reopened_tickets} tickets. Local state reset.\n`);
   },
 
   examples: async () => {
@@ -39,24 +46,43 @@ const commands: Record<string, () => Promise<void>> = {
     }
   },
 
+  ticket: async (args: string[]) => {
+    const id = args[0];
+    if (!id) {
+      console.error("❌ Please provide a ticket ID (e.g. npx tsx src/main.ts ticket T001)");
+      return;
+    }
+    const t = await client.getTicket(id);
+    console.log(`\n🎫 Ticket ${t.id}:`);
+    console.log(`   Subject:  ${t.subject}`);
+    console.log(`   Plan:     ${t.customer_plan}`);
+    console.log(`   Channel:  ${t.channel}`);
+    console.log(`   Received: ${t.received_at}`);
+    console.log(`   Handled:  ${t.status ?? "unhandled"}`);
+    console.log(`\n   Body:\n   ${t.body}\n`);
+  },
+
   help: async () => {
     console.log(`
 🐓 Roosterly Helpdesk Agent
 
-Usage: npx tsx src/main.ts <command>
+Usage: npx tsx src/main.ts <command> [args]
 
 Commands:
-  status    Show helpdesk status
-  reset     Reset all practice tickets
-  examples  Show the 10 labelled examples
-  tickets   List all open tickets
-  help      Show this message
+  status        Show helpdesk & local state status
+  reset         Reset all practice tickets & clear local state
+  examples      Show the 10 labelled examples
+  tickets       List all open tickets
+  ticket <id>   Inspect a single ticket by ID
+  help          Show this message
     `);
   },
 };
 
 async function main() {
-  const command = process.argv[2] ?? "help";
+  const args = process.argv.slice(2);
+  const command = args[0] ?? "help";
+  const commandArgs = args.slice(1);
 
   try {
     validateHelpdeskConfig();
@@ -69,11 +95,11 @@ async function main() {
   const handler = commands[command];
   if (!handler) {
     console.error(`Unknown command: ${command}`);
-    await commands.help();
+    await commands.help([]);
     process.exit(1);
   }
 
-  await handler();
+  await handler(commandArgs);
 }
 
 main().catch((err) => {
