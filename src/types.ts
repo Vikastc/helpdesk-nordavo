@@ -142,7 +142,15 @@ export const LlmVerificationSchema = z.object({
   explanation: z.string(),
 });
 
-export type VerificationResult = z.infer<typeof LlmVerificationSchema>;
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
+export type VerificationResult = z.infer<typeof LlmVerificationSchema> & {
+  usage?: TokenUsage;
+};
 
 export const ClassificationSchema = z.object({
   language: z.enum(["nl", "en", "de"]),
@@ -156,4 +164,6 @@ export const ClassificationSchema = z.object({
   verification: LlmVerificationSchema.optional(),
 });
 
-export type Classification = z.infer<typeof ClassificationSchema>;
+export type Classification = z.infer<typeof ClassificationSchema> & {
+  usage?: TokenUsage;
+};

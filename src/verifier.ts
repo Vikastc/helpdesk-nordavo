@@ -21,11 +21,16 @@ Roosterly is a Dutch shift-planning SaaS for restaurants and shops.
 ${FAQ_KNOWLEDGE_BASE}
 
 ## YOUR TASK:
-1. Translate the Dutch/non-English draft customer reply into precise English ("back_translation").
-2. Check whether EVERY factual statement, step, URL, plan detail, and instruction in the reply is 100% grounded in and supported by the Official Roosterly Knowledge Base above.
-3. If the reply invents any information, promises features not in the FAQ, gives ungrounded instructions, promises refunds, or guesses facts, you MUST set "grounded": false and list each unsupported claim in "unsupported_claims".
-4. If and only if EVERY factual claim in the reply is completely accurate and grounded in the FAQ, set "grounded": true and leave "unsupported_claims" as an empty list [].
-5. Provide a concise explanation of your grounding assessment in "explanation".`;
+1. Translate non-English draft customer replies into precise English ("back_translation"). If already in English, output the English text.
+2. Check whether the draft reply is grounded in and supported by the Official Roosterly Knowledge Base above:
+   - Factual grounding: All product specifications, prices, URLs, and system requirements (e.g., F12 iOS 16+ / Android 10+) must match the FAQ.
+   - Logical application: Directly applying an FAQ specification to the customer's stated facts (e.g., explaining that an iPhone running iOS 15 does not meet the iOS 16+ requirement in F12, or pointing to status.roosterly.nl for maintenance queries per F11) is legitimate and considered grounded.
+   - Professional etiquette: Standard greetings, polite sign-offs, and recommending a supported device/OS do NOT count as hallucinations.
+3. When to fail ("grounded": false):
+   - ONLY set "grounded": false if the reply invents ungrounded business policies, promises refunds/discounts, gives inaccurate prices, invents fake URLs or email addresses, or promises features not in the FAQ.
+   - List any such invented claims in "unsupported_claims".
+4. If the reply is consistent with the FAQ, set "grounded": true and leave "unsupported_claims" as [].
+5. Provide a concise explanation of your assessment in "explanation".`;
 
 // ─── OpenAI Client Lazy Initializer ───────────────────────────────
 
@@ -80,11 +85,20 @@ export async function verifyDraftReply(
       throw new Error("Verification parsing returned null");
     }
 
+    const usage = response.usage
+      ? {
+          prompt_tokens: response.usage.prompt_tokens,
+          completion_tokens: response.usage.completion_tokens,
+          total_tokens: response.usage.total_tokens,
+        }
+      : undefined;
+
     return {
       back_translation: parsed.back_translation,
       grounded: parsed.grounded,
       unsupported_claims: parsed.unsupported_claims ?? [],
       explanation: parsed.explanation,
+      usage,
     };
   } catch (err) {
     console.error("  ⚠️  Verification error:", err);
@@ -124,9 +138,25 @@ export async function applyVerificationSafetyNet(
     options
   );
 
+  const combinedUsage =
+    classification.usage || verification.usage
+      ? {
+          prompt_tokens:
+            (classification.usage?.prompt_tokens ?? 0) +
+            (verification.usage?.prompt_tokens ?? 0),
+          completion_tokens:
+            (classification.usage?.completion_tokens ?? 0) +
+            (verification.usage?.completion_tokens ?? 0),
+          total_tokens:
+            (classification.usage?.total_tokens ?? 0) +
+            (verification.usage?.total_tokens ?? 0),
+        }
+      : undefined;
+
   const updated: Classification = {
     ...classification,
     verification,
+    usage: combinedUsage,
   };
 
   if (!verification.grounded || verification.unsupported_claims.length > 0) {

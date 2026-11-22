@@ -5,6 +5,7 @@ import * as client from "./client.js";
 import { resetLocalState, loadState, isTicketHandled } from "./state.js";
 import { classifyTicket } from "./classifier.js";
 import { runAgent } from "./agent.js";
+import { runEvaluation } from "./eval.js";
 
 const commands: Record<string, (args: string[]) => Promise<void>> = {
   run: async () => {
@@ -144,6 +145,12 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     console.log("");
   },
 
+  eval: async (args: string[]) => {
+    validateFullConfig();
+    const forceRefresh = args.includes("--refresh");
+    await runEvaluation({ forceRefresh });
+  },
+
   help: async () => {
     console.log(`
 🐓 Roosterly Helpdesk Agent
@@ -155,6 +162,7 @@ Commands:
   status                      Show helpdesk & local state status
   reset                       Reset all practice tickets & clear local state
   examples                    Show the 10 labelled examples
+  eval [--refresh]            Run accuracy evaluation against the 10 gold examples
   tickets                     List all open tickets
   ticket <id>                 Inspect a single ticket by ID
   classify <id> [--force]     Classify a ticket with Claude & guardrails (skips if handled)
