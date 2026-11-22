@@ -2,10 +2,16 @@
 
 import { validateHelpdeskConfig, validateFullConfig } from "./config.js";
 import * as client from "./client.js";
-import { resetLocalState, loadState } from "./state.js";
+import { resetLocalState, loadState, isTicketHandled } from "./state.js";
 import { classifyTicket } from "./classifier.js";
+import { runAgent } from "./agent.js";
 
 const commands: Record<string, (args: string[]) => Promise<void>> = {
+  run: async () => {
+    validateFullConfig();
+    await runAgent();
+  },
+
   status: async () => {
     const s = await client.getStatus();
     const localState = loadState();
@@ -23,7 +29,9 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     console.log("🔄 Resetting practice tickets on Helpdesk API...");
     const res = await client.resetPractice();
     resetLocalState();
-    console.log(`✅ Re-opened ${res.reopened_tickets} tickets. Local state reset.\n`);
+    console.log(
+      `✅ Re-opened ${res.reopened_tickets} tickets. Local state reset.\n`,
+    );
   },
 
   examples: async () => {
@@ -31,7 +39,7 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     console.log(`\n📋 ${examples.length} labelled examples:\n`);
     for (const ex of examples) {
       console.log(
-        `  ${ex.id}: [${ex.label.action}] ${ex.label.category} ${ex.label.priority} — ${ex.subject}`
+        `  ${ex.id}: [${ex.label.action}] ${ex.label.category} ${ex.label.priority} — ${ex.subject}`,
       );
       console.log(`        Reason: ${ex.label.reason}\n`);
     }
@@ -50,27 +58,65 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
   ticket: async (args: string[]) => {
     const id = args[0];
     if (!id) {
-      console.error("❌ Please provide a ticket ID (e.g. npx tsx src/main.ts ticket T001)");
+      console.error(
+        "❌ Please provide a ticket ID (e.g. npx tsx src/main.ts ticket T001)",
+      );
       return;
     }
     const t = await client.getTicket(id);
+    const handledStr = t.handled
+      ? `${t.handled.action} (at ${t.handled.at})`
+      : "unhandled (open)";
     console.log(`\n🎫 Ticket ${t.id}:`);
     console.log(`   Subject:  ${t.subject}`);
     console.log(`   Plan:     ${t.customer_plan}`);
     console.log(`   Channel:  ${t.channel}`);
     console.log(`   Received: ${t.received_at}`);
-    console.log(`   Handled:  ${t.status ?? "unhandled"}`);
+    console.log(`   Handled:  ${handledStr}`);
     console.log(`\n   Body:\n   ${t.body}\n`);
   },
 
   classify: async (args: string[]) => {
     validateFullConfig();
     const id = args[0];
+    const force = args.includes("--force");
     if (!id) {
-      console.error("❌ Please provide a ticket ID (e.g. npx tsx src/main.ts classify T001)");
+      console.error(
+        "❌ Please provide a ticket ID (e.g. npx tsx src/main.ts classify T001 [--force])",
+      );
       return;
     }
+
     const t = await client.getTicket(id);
+    const state = loadState();
+    const isLocalHandled = isTicketHandled(state, id);
+    const isApiHandled = Boolean(t.handled);
+
+    if (isLocalHandled || isApiHandled) {
+      console.log(`\n⚠️  Ticket ${id} is ALREADY HANDLED:`);
+      if (isApiHandled) {
+        console.log(
+          `   • Remote API:  handled (${t.handled?.action} at ${t.handled?.at})`,
+        );
+      }
+      if (isLocalHandled) {
+        const record = state.handled_tickets[id];
+        console.log(
+          `   • Local State: handled (${record?.action} at ${record?.timestamp})`,
+        );
+      }
+
+      if (!force) {
+        console.log(
+          `\n⏭️  Skipping LLM call (ticket already resolved). Use "npx tsx src/main.ts classify ${id} --force" to override.\n`,
+        );
+        return;
+      }
+      console.log(
+        `   ⚡ --force flag detected: proceeding with dry-run classification...\n`,
+      );
+    }
+
     console.log(`\n🤖 Classifying Ticket ${t.id} with Claude...`);
     console.log(`   Subject: "${t.subject}"`);
     console.log(`   Body:    "${t.body}"\n`);
@@ -87,20 +133,21 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
 Usage: npx tsx src/main.ts <command> [args]
 
 Commands:
-  status        Show helpdesk & local state status
-  reset         Reset all practice tickets & clear local state
-  examples      Show the 10 labelled examples
-  tickets       List all open tickets
-  ticket <id>     Inspect a single ticket by ID
-  classify <id>   Classify a ticket with Claude & guardrails (dry run)
-  help            Show this message
+  run                         Process all open tickets autonomously (default)
+  status                      Show helpdesk & local state status
+  reset                       Reset all practice tickets & clear local state
+  examples                    Show the 10 labelled examples
+  tickets                     List all open tickets
+  ticket <id>                 Inspect a single ticket by ID
+  classify <id> [--force]     Classify a ticket with Claude & guardrails (skips if handled)
+  help                        Show this message
     `);
   },
 };
 
 async function main() {
   const args = process.argv.slice(2);
-  const command = args[0] ?? "help";
+  const command = args[0] ?? "run";
   const commandArgs = args.slice(1);
 
   try {

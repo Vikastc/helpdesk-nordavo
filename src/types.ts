@@ -4,6 +4,11 @@ import { z } from "zod";
 
 // ─── API responses ────────────────────────────────────────────────
 
+export interface TicketHandledInfo {
+  action: string;
+  at: string;
+}
+
 export interface Ticket {
   id: string;
   received_at: string;
@@ -12,6 +17,7 @@ export interface Ticket {
   subject: string;
   body: string;
   status?: string;
+  handled?: TicketHandledInfo | null;
 }
 
 export interface TicketsPage {
