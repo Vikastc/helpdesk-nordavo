@@ -29,7 +29,7 @@ LLM_MODEL=claude-haiku-5-5
 ### Commands
 ```bash
 # Process all open tickets autonomously (the primary assignment command)
-npm run run
+npm start          # or: npm run run
 
 # Check live helpdesk status and local checkpoint state
 npm run status
