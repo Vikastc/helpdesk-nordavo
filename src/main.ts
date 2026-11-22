@@ -123,6 +123,24 @@ const commands: Record<string, (args: string[]) => Promise<void>> = {
     const decision = await classifyTicket(t);
     console.log("📋 Decision Result:");
     console.log(JSON.stringify(decision, null, 2));
+
+    if (decision.verification) {
+      console.log("\n🔍 Dutch Language Verification & Grounding Audit:");
+      console.log(
+        `   • Grounded in FAQ:   ${decision.verification.grounded ? "✅ YES" : "❌ NO"}`,
+      );
+      console.log(
+        `   • Back-Translation:  "${decision.verification.back_translation}"`,
+      );
+      if (decision.verification.unsupported_claims.length > 0) {
+        console.log(
+          `   • Unsupported:       ${decision.verification.unsupported_claims.join("; ")}`,
+        );
+      }
+      console.log(
+        `   • Auditor Notes:     ${decision.verification.explanation}`,
+      );
+    }
     console.log("");
   },
 

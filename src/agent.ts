@@ -138,6 +138,11 @@ export async function runAgent(
         `   → Decision: [${decision.action.toUpperCase()}] Category: ${decision.category} | Priority: ${decision.priority} | Lang: ${decision.language}`
       );
       console.log(`   → Reason: ${decision.reason}`);
+      if (decision.verification) {
+        console.log(
+          `   🔍 Grounding Check: grounded=${decision.verification.grounded} | Back-translation: "${decision.verification.back_translation}"`
+        );
+      }
 
       // Step B: Dispatch Action to Helpdesk API
       console.log(`   🚀 Dispatching ${decision.action} to Helpdesk API...`);
@@ -164,6 +169,13 @@ export async function runAgent(
         reason: decision.reason,
         confidence: decision.confidence,
         success: true,
+        verification: decision.verification
+          ? {
+              back_translation: decision.verification.back_translation,
+              grounded: decision.verification.grounded,
+              unsupported_claims: decision.verification.unsupported_claims,
+            }
+          : undefined,
       });
 
       // Update counters

@@ -134,6 +134,16 @@ export const LlmClassificationSchema = z.object({
 
 export type LlmClassification = z.infer<typeof LlmClassificationSchema>;
 
+/** Schema for Dutch/Language Verification & Grounding Check */
+export const LlmVerificationSchema = z.object({
+  back_translation: z.string(),
+  grounded: z.boolean(),
+  unsupported_claims: z.array(z.string()),
+  explanation: z.string(),
+});
+
+export type VerificationResult = z.infer<typeof LlmVerificationSchema>;
+
 export const ClassificationSchema = z.object({
   language: z.enum(["nl", "en", "de"]),
   category: z.enum(["bug", "billing", "feature_request", "question", "other"]),
@@ -143,6 +153,7 @@ export const ClassificationSchema = z.object({
   draft_reply: z.string().optional(),
   handoff_note: z.string().optional(),
   confidence: z.number().min(0).max(1).optional(),
+  verification: LlmVerificationSchema.optional(),
 });
 
 export type Classification = z.infer<typeof ClassificationSchema>;

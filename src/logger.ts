@@ -20,6 +20,11 @@ export interface TicketLogEntry {
   confidence?: number;
   success: boolean;
   error?: string;
+  verification?: {
+    back_translation: string;
+    grounded: boolean;
+    unsupported_claims?: string[];
+  };
 }
 
 export interface LoggerInstance {
@@ -50,6 +55,12 @@ export function createLogger(
       ...entry,
       reason: stripPII(entry.reason),
       error: entry.error ? stripPII(entry.error) : undefined,
+      verification: entry.verification
+        ? {
+            ...entry.verification,
+            back_translation: stripPII(entry.verification.back_translation),
+          }
+        : undefined,
     };
     stream.write(JSON.stringify(sanitized) + "\n");
   };

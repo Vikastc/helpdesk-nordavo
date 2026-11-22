@@ -10,7 +10,7 @@ export const config = {
   },
   llm: {
     apiKey: process.env.ANTHROPIC_API_KEY ?? "",
-    model: process.env.LLM_MODEL ?? "claude-sonnet-4-20250514",
+    model: process.env.LLM_MODEL ?? "claude-haiku-5-5",
     baseUrl: "https://api.anthropic.com/v1/",
   },
 } as const;
