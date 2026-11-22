@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/main.ts run",
-    "run": "tsx src/main.ts run",
     "eval": "tsx src/main.ts eval",
     "status": "tsx src/main.ts status",
     "reset": "tsx src/main.ts reset",
