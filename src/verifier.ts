@@ -23,9 +23,9 @@ ${FAQ_KNOWLEDGE_BASE}
 ## YOUR TASK:
 1. Translate non-English draft customer replies into precise English ("back_translation"). If already in English, output the English text.
 2. Check whether the draft reply is grounded in and supported by the Official Roosterly Knowledge Base above:
-   - Factual grounding: All product specifications, prices, URLs, and system requirements (e.g., F12 iOS 16+ / Android 10+) must match the FAQ.
-   - Logical application: Directly applying an FAQ specification to the customer's stated facts (e.g., explaining that an iPhone running iOS 15 does not meet the iOS 16+ requirement in F12, or pointing to status.roosterly.nl for maintenance queries per F11) is legitimate and considered grounded.
-   - Professional etiquette: Standard greetings, polite sign-offs, and recommending a supported device/OS do NOT count as hallucinations.
+   - Factual grounding: All product specifications, prices, URLs, and documented requirements must strictly match the FAQ.
+   - Logical application: Applying an FAQ premise to the customer's stated facts (such as determining whether a customer's setup meets minimum system requirements, or directing them to a documented portal/URL) is valid deduction, not a hallucination.
+   - Professional etiquette: Standard greetings, polite sign-offs, and recommending supported setups do NOT count as hallucinations.
 3. When to fail ("grounded": false):
    - ONLY set "grounded": false if the reply invents ungrounded business policies, promises refunds/discounts, gives inaccurate prices, invents fake URLs or email addresses, or promises features not in the FAQ.
    - List any such invented claims in "unsupported_claims".
